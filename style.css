@@ -1,0 +1,26 @@
+body {
+  font-family: sans-serif;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+#controls {
+  margin: 20px 0;
+}
+
+#pivotTable {
+  margin-top: 20px;
+  border-collapse: collapse;
+}
+
+#pivotTable table, #pivotTable th, #pivotTable td {
+  border: 1px solid #333;
+  padding: 5px 10px;
+}
+
+#pivotTable th {
+  background-color: #f0f0f0;
+}
