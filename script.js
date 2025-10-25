@@ -7,14 +7,11 @@ function handleFile(e) {
   const reader = new FileReader();
   
   reader.onload = function(evt) {
-    let workbook;
     if(file.name.endsWith(".csv")) {
-      const text = evt.target.result;
-      data = Papa.parse(text, {header: true}).data;
+      data = Papa.parse(evt.target.result, {header: true}).data;
       populateColumns();
     } else {
-      const ab = evt.target.result;
-      workbook = XLSX.read(ab, {type: 'array'});
+      const workbook = XLSX.read(evt.target.result, {type: 'array'});
       const sheetName = workbook.SheetNames[0];
       data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
       populateColumns();
@@ -25,73 +22,127 @@ function handleFile(e) {
   else reader.readAsArrayBuffer(file);
 }
 
-// Remplit les selects avec les noms de colonnes
 function populateColumns() {
   const cols = Object.keys(data[0]);
-  const mainSelect = document.getElementById("mainCol");
-  const subSelect = document.getElementById("subCol");
-  mainSelect.innerHTML = "";
-  subSelect.innerHTML = "";
-  cols.forEach(c => {
-    mainSelect.innerHTML += `<option value="${c}">${c}</option>`;
-    subSelect.innerHTML += `<option value="${c}">${c}</option>`;
-  });
+  for(let i=1; i<=4; i++) {
+    const sel = document.getElementById(`level${i}`);
+    sel.innerHTML = "";
+    cols.forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+  }
 }
 
 document.getElementById("generateBtn").addEventListener("click", generatePivot);
 
 function generatePivot() {
-  const main = document.getElementById("mainCol").value;
-  const sub = document.getElementById("subCol").value;
+  const levels = [
+    document.getElementById("level1").value,
+    document.getElementById("level2").value,
+    document.getElementById("level3").value,
+    document.getElementById("level4").value
+  ].filter(l => l); // filtrer niveaux vides
 
-  // Création d'une structure pivot simple
+  const pivot = buildPivot(data, levels);
+  renderTable(pivot, levels);
+  renderChart(pivot, levels);
+}
+
+// Construire le pivot récursif
+function buildPivot(data, levels) {
   const pivot = {};
   data.forEach(row => {
-    const mainVal = row[main] || "N/A";
-    const subVal = row[sub] || "N/A";
-    if(!pivot[mainVal]) pivot[mainVal] = {};
-    pivot[mainVal][subVal] = (pivot[mainVal][subVal] || 0) + 1;
-  });
-
-  renderTable(pivot);
-  renderChart(pivot);
-}
-
-function renderTable(pivot) {
-  const container = document.getElementById("pivotTable");
-  const allSubCols = Array.from(new Set([].concat(...Object.values(pivot).map(v => Object.keys(v)))));
-  
-  let html = "<table><thead><tr><th></th>";
-  allSubCols.forEach(sc => html += `<th>${sc}</th>`);
-  html += "</tr></thead><tbody>";
-
-  Object.keys(pivot).forEach(mainKey => {
-    html += `<tr><th>${mainKey}</th>`;
-    allSubCols.forEach(subKey => {
-      html += `<td>${pivot[mainKey][subKey] || 0}</td>`;
+    let node = pivot;
+    levels.forEach((lvl, idx) => {
+      const val = row[lvl] || "N/A";
+      if(idx === levels.length - 1) {
+        node[val] = (node[val] || 0) + 1;
+      } else {
+        if(!node[val]) node[val] = {};
+        node = node[val];
+      }
     });
-    html += "</tr>";
   });
-
-  html += "</tbody></table>";
-  container.innerHTML = html;
+  return pivot;
 }
 
-function renderChart(pivot) {
+// Rendu tableau récursif
+function renderTable(pivot, levels) {
+  const container = document.getElementById("pivotTable");
+  container.innerHTML = "";
+
+  const table = document.createElement("table");
+  const thead = document.createElement("thead");
+  const tbody = document.createElement("tbody");
+
+  // Fonction récursive pour générer les lignes
+  function traverse(node, row = [], depth = 0) {
+    if(typeof node === "number") {
+      const tr = document.createElement("tr");
+      row.forEach(val => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      const td = document.createElement("td");
+      td.textContent = node;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    } else {
+      Object.keys(node).forEach(k => {
+        traverse(node[k], [...row, k], depth+1);
+      });
+    }
+  }
+
+  traverse(pivot);
+
+  // Header
+  const headerTr = document.createElement("tr");
+  levels.forEach(l => {
+    const th = document.createElement("th");
+    th.textContent = l;
+    headerTr.appendChild(th);
+  });
+  const thCount = document.createElement("th");
+  thCount.textContent = "Count";
+  headerTr.appendChild(thCount);
+  thead.appendChild(headerTr);
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+// Rendu graphique (barres empilées)
+function renderChart(pivot, levels) {
   const ctx = document.getElementById('pivotChart').getContext('2d');
-  const allSubCols = Array.from(new Set([].concat(...Object.values(pivot).map(v => Object.keys(v)))));
-  const labels = Object.keys(pivot);
-  const datasets = allSubCols.map(sub => ({
+
+  // Fonction pour aplatir pivot en datasets pour Chart.js
+  const datasets = {};
+  function flatten(node, path=[]) {
+    if(typeof node === "number") {
+      const key = path.slice(0, -1).join(" | ") || path[0];
+      if(!datasets[key]) datasets[key] = {};
+      datasets[key][path[path.length-1]] = node;
+    } else {
+      Object.keys(node).forEach(k => flatten(node[k], [...path, k]));
+    }
+  }
+  flatten(pivot);
+
+  const labels = Object.keys(datasets);
+  const subKeys = Array.from(new Set([].concat(...Object.values(datasets).map(d => Object.keys(d)))));
+
+  const chartDatasets = subKeys.map(sub => ({
     label: sub,
-    data: labels.map(main => pivot[main][sub] || 0),
+    data: labels.map(lbl => datasets[lbl][sub] || 0),
     backgroundColor: getRandomColor()
   }));
 
   if(window.chart) window.chart.destroy();
   window.chart = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets },
-    options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    data: { labels, datasets: chartDatasets },
+    options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { stacked: true }, y: { stacked: true } } }
   });
 }
 
