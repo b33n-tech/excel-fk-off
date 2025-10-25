@@ -2,28 +2,35 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Pivot Web</title>
+  <title>Pivot Web Multi-Niveaux</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-  <h1>Pivot Web</h1>
+  <h1>Pivot Web Multi-Niveaux</h1>
 
   <input type="file" id="fileInput" accept=".csv, .xlsx">
   
   <div id="controls">
-    <label>Choisir colonne principale:
-      <select id="mainCol"></select>
+    <label>Colonne principale:
+      <select id="level1"></select>
     </label>
-    <label>Choisir sous-colonne:
-      <select id="subCol"></select>
+    <label>Sous-colonne 1:
+      <select id="level2"></select>
+    </label>
+    <label>Sous-colonne 2:
+      <select id="level3"></select>
+    </label>
+    <label>Sous-colonne 3:
+      <select id="level4"></select>
     </label>
     <button id="generateBtn">Générer le tableau croisé</button>
   </div>
 
   <div id="pivotTable"></div>
-  <canvas id="pivotChart" width="800" height="400"></canvas>
+  <canvas id="pivotChart" width="1000" height="400"></canvas>
 
   <script src="script.js"></script>
 </body>
