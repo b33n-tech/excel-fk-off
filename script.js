@@ -73,7 +73,6 @@ function renderTable(pivot, levels) {
   const thead = document.createElement("thead");
   const tbody = document.createElement("tbody");
 
-  // Fonction récursive pour générer les lignes
   function traverse(node, row = [], depth = 0) {
     if(typeof node === "number") {
       const tr = document.createElement("tr");
@@ -87,15 +86,12 @@ function renderTable(pivot, levels) {
       tr.appendChild(td);
       tbody.appendChild(tr);
     } else {
-      Object.keys(node).forEach(k => {
-        traverse(node[k], [...row, k], depth+1);
-      });
+      Object.keys(node).forEach(k => traverse(node[k], [...row, k], depth+1));
     }
   }
 
   traverse(pivot);
 
-  // Header
   const headerTr = document.createElement("tr");
   levels.forEach(l => {
     const th = document.createElement("th");
@@ -112,30 +108,32 @@ function renderTable(pivot, levels) {
   container.appendChild(table);
 }
 
-// Rendu graphique (barres empilées)
+// Rendu graphique avec color picker
 function renderChart(pivot, levels) {
   const ctx = document.getElementById('pivotChart').getContext('2d');
 
-  // Fonction pour aplatir pivot en datasets pour Chart.js
-  const datasets = {};
+  const datasetsObj = {};
   function flatten(node, path=[]) {
     if(typeof node === "number") {
       const key = path.slice(0, -1).join(" | ") || path[0];
-      if(!datasets[key]) datasets[key] = {};
-      datasets[key][path[path.length-1]] = node;
+      if(!datasetsObj[key]) datasetsObj[key] = {};
+      datasetsObj[key][path[path.length-1]] = node;
     } else {
       Object.keys(node).forEach(k => flatten(node[k], [...path, k]));
     }
   }
   flatten(pivot);
 
-  const labels = Object.keys(datasets);
-  const subKeys = Array.from(new Set([].concat(...Object.values(datasets).map(d => Object.keys(d)))));
+  const labels = Object.keys(datasetsObj);
+  const subKeys = Array.from(new Set([].concat(...Object.values(datasetsObj).map(d => Object.keys(d)))));
+
+  // Générer color pickers
+  renderColorPickers(subKeys);
 
   const chartDatasets = subKeys.map(sub => ({
     label: sub,
-    data: labels.map(lbl => datasets[lbl][sub] || 0),
-    backgroundColor: getRandomColor()
+    data: labels.map(lbl => datasetsObj[lbl][sub] || 0),
+    backgroundColor: subColors[sub] || getRandomColor()
   }));
 
   if(window.chart) window.chart.destroy();
@@ -143,6 +141,37 @@ function renderChart(pivot, levels) {
     type: 'bar',
     data: { labels, datasets: chartDatasets },
     options: { responsive: true, plugins: { legend: { position: 'top' } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+  });
+}
+
+// Couleurs stockées par sous-colonne
+const subColors = {};
+
+function renderColorPickers(subKeys) {
+  const container = document.getElementById("colorControls");
+  container.innerHTML = "";
+
+  subKeys.forEach(sub => {
+    const label = document.createElement("label");
+    label.textContent = sub;
+
+    const input = document.createElement("input");
+    input.type = "color";
+    input.value = subColors[sub] || getRandomColor();
+    subColors[sub] = input.value;
+
+    input.addEventListener("input", () => {
+      subColors[sub] = input.value;
+      // mettre à jour couleur dataset
+      const ds = window.chart.data.datasets.find(d => d.label === sub);
+      if(ds) {
+        ds.backgroundColor = input.value;
+        window.chart.update();
+      }
+    });
+
+    label.appendChild(input);
+    container.appendChild(label);
   });
 }
 
