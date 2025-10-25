@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Pivot Web</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Pivot Web</h1>
+
+  <input type="file" id="fileInput" accept=".csv, .xlsx">
+  
+  <div id="controls">
+    <label>Choisir colonne principale:
+      <select id="mainCol"></select>
+    </label>
+    <label>Choisir sous-colonne:
+      <select id="subCol"></select>
+    </label>
+    <button id="generateBtn">Générer le tableau croisé</button>
+  </div>
+
+  <div id="pivotTable"></div>
+  <canvas id="pivotChart" width="800" height="400"></canvas>
+
+  <script src="script.js"></script>
+</body>
+</html>
