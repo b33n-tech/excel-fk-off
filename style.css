@@ -9,6 +9,10 @@ h1 {
 
 #controls {
   margin: 20px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 #pivotTable {
@@ -23,4 +27,9 @@ h1 {
 
 #pivotTable th {
   background-color: #f0f0f0;
+}
+
+select, button {
+  padding: 5px 10px;
+  font-size: 14px;
 }
